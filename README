@@ -1,0 +1,119 @@
+# Financial Fraud Risk Scoring API
+
+**Author:** Wasay Aamer  
+**Email:** wasayaamersana@gmail.com
+
+This project is a machine learning API for financial transaction risk scoring.  
+Since the dataset does not contain confirmed fraud labels, the problem is treated as an unsupervised anomaly-detection task rather than a supervised fraud-classification task.
+
+The API uses engineered transaction features and an Isolation Forest model to assign each transaction a risk score from 0 to 100.
+
+## Project Overview
+
+Financial fraud datasets often contain transaction details such as amount, account balance, customer behavior, location, IP address, device ID, login attempts, and transaction timing.
+
+In this project, I built a fraud-risk scoring pipeline that:
+
+- Performs feature engineering on raw transaction data
+- Uses an unsupervised Isolation Forest model to detect anomalous transactions
+- Converts anomaly scores into a 0–100 risk score
+- Classifies transactions as Low, Medium, or High Risk
+- Serves predictions through a FastAPI endpoint
+- Uses Docker for containerized deployment
+- Includes pytest tests for API validation
+
+## Important Note
+
+This project does not predict confirmed fraud because the dataset does not contain true fraud labels.
+
+Instead, the model identifies transactions that are unusual compared to normal transaction behavior and assigns them a risk score.
+
+The output should be interpreted as:
+
+Low Risk / Medium Risk / High Risk
+
+## Features Used
+
+The model uses engineered transaction-level features to estimate how unusual or risky a transaction appears compared to normal transaction behavior.
+
+| Feature | Description |
+|---|---|
+| `AmountToBalanceRatio` | Measures how large the transaction is compared to the available account balance. A higher ratio may indicate higher risk because the transaction uses a large portion of the account balance. |
+| `TimeSincePreviousTransaction` | Represents the time gap between the current transaction and the previous transaction. Very short or unusual time gaps may indicate suspicious activity. |
+| `IsNewLocation` | Binary feature indicating whether the transaction occurred in a location not previously associated with the account. New locations can be a potential fraud-risk signal. |
+| `IsNewIP` | Binary feature indicating whether the transaction used a new IP address for the account. A new IP may suggest unusual access behavior. |
+| `IsHighLoginAttempt` | Binary feature indicating whether the number of login attempts was unusually high. Multiple login attempts can be associated with suspicious account access. |
+| `TransactionHour` | Extracts the hour of the day from the transaction timestamp. Transactions occurring at unusual hours may appear more anomalous. |
+| `TransactionDayOfWeek` | Extracts the day of the week from the transaction timestamp. This helps capture transaction behavior patterns across weekdays and weekends. |
+| `IsOnlineTransaction` | Binary feature indicating whether the transaction was performed through an online channel. Online transactions may carry different risk patterns than ATM or branch transactions. |
+| `CustomerAgeGroup` | Encoded age-group category for the customer. This helps the model capture differences in transaction behavior across age groups. |
+
+## Installation and Running with Docker
+
+This project can be run inside a Docker container so that the API works consistently across different machines without manually setting up a Python environment.
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/wez1102/FraudDetection.git
+cd FraudDetection
+```
+
+### 2. Build the Docker Image
+
+From the root of the project folder, run:
+```bash
+docker build -t fraud-risk-api .
+```
+
+This command builds a Docker image named fraud-risk-api using the Dockerfile.
+
+### 3. Run the Docker Container
+```bash
+docker run -p 8000:8000 fraud-risk-api
+```
+This maps port 8000 inside the container to port 8000 on your local machine.
+
+### 4. Open the API Documentation
+
+Once the container is running, open the FastAPI documentation in your browser:
+```bash
+http://localhost:8000/docs
+```
+You can test the API directly from the Swagger UI.
+
+### 5. Test the Health Endpoint
+```bash
+curl http://localhost:8000/health
+
+Example response:
+
+{
+  "status": "healthy"
+}
+```
+### 6. Test the Prediction Endpoint
+```bash
+curl -X POST "http://localhost:8000/predict" \
+-H "Content-Type: application/json" \
+-d '{
+  "AccountID": "12345",
+  "AmountToBalanceRatio": 0.1,
+  "TimeSincePreviousTransaction": 500,
+  "IsNewLocation": 1,
+  "IsNewIP": 1,
+  "IsHighLoginAttempt": 1,
+  "TransactionHour": 23,
+  "TransactionDayOfWeek": 5,
+  "IsOnlineTransaction": 1,
+  "CustomerAgeGroup": 4
+}'
+
+Example response:
+
+{
+  "AccountID": "12345",
+  "RiskScore": 82.45,
+  "RiskLevel": "High Risk"
+}
+```
